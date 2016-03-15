@@ -68,17 +68,18 @@ public class MainActivity extends Activity {
 	 * 扫描蓝牙设备
 	 */
     private void scanDevices(){
-    	if(helper==null){
-    		Toast.makeText(this, "抱歉，您的设备不支持蓝牙功能", Toast.LENGTH_SHORT).show();
-    		return;
-    	}
     	if(helper.isEnabled()){
     		if(!helper.isScanning()){
     			helper.startScan(null);
     		}
     	}else{
-    		helper.enable();
-    		scanDevices();
+    		boolean enable = helper.enable();
+    		if(enable){
+    			scanDevices();
+    		}else{
+    			Toast.makeText(this, "抱歉，您的设备不支持蓝牙功能", Toast.LENGTH_SHORT).show();
+    			return;
+    		}
     	}
     }
     @Override
