@@ -21,7 +21,7 @@ public class MainActivity extends Activity {
 		
 		@Override
 		public void onScanStateChange(int arg0) {
-			// TODO Auto-generated method stub
+			
 			
 		}
 		
