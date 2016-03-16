@@ -3,6 +3,7 @@ package cn.net.sinotour;
 import java.util.ArrayList;
 import java.util.List;
 
+
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
@@ -52,7 +53,6 @@ public class MainActivity extends Activity {
 			@Override
 			public void onClick(View v) {
 				//下载景区离线包
-				
 			}
 		});
 		

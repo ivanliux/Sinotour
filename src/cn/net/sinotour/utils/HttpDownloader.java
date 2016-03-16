@@ -48,11 +48,11 @@ public class HttpDownloader {
 	 * @param fileName
 	 * @param iDownload
 	 */
-	public void addDownloadTask(String urlPath,String filePath,String fileName,IDownload iDownload){
+	public void addDownloadTask(String urlPath,String filePath,IDownload iDownload){
 		DownLoadThread thread = DownLoadThreads.get(urlPath);
 		Log.e("downloadmap", DownLoadThreads.toString());
 		if(thread==null){
-			DownLoadThread downLoadThread=new DownLoadThread(urlPath, filePath, fileName, iDownload);
+			DownLoadThread downLoadThread=new DownLoadThread(urlPath, filePath, iDownload);
 			downLoadThread.start();
 		}
 	}
@@ -64,19 +64,17 @@ public class HttpDownloader {
 	private class DownLoadThread extends Thread {
 		private String urlPath;
 		private String filePath;
-		private String fileName;
 		private IDownload iDownload;
 		private int timeoutCount;
-		public DownLoadThread(String urlPath,String filePath,String fileName,IDownload iDownload){
+		public DownLoadThread(String urlPath,String filePath,IDownload iDownload){
 			this.urlPath=urlPath;
 			this.filePath=filePath;
-			this.fileName=fileName;
 			this.iDownload=iDownload;
 			this.timeoutCount=0;
 		}
 		@Override
 		public void run() {
-			downloadFile(urlPath, filePath, fileName, iDownload);
+			downloadFile(urlPath, filePath,iDownload);
 			super.run();
 		}
 		/**
@@ -87,7 +85,7 @@ public class HttpDownloader {
 		 * @param fileName
 		 * @param upload
 		 */
-		public  void downloadFile(String urlPath, String filePath, String fileName,
+		public  void downloadFile(String urlPath, String filePath,
 				IDownload iDownload) {
 			DownLoadThreads.put(urlPath, this);
 			Log.e("downloadmap", DownLoadThreads.toString());
@@ -109,7 +107,7 @@ public class HttpDownloader {
 					if (!file.exists()) {
 						file.mkdirs();
 					}
-					File f = new File(file, fileName);
+					File f = new File(file, getFileName(urlPath));
 					FileOutputStream outstream = new FileOutputStream(f);
 					is = conn.getInputStream();
 					byte[] buffer = new byte[1024];
@@ -135,7 +133,7 @@ public class HttpDownloader {
 						timeoutCount++;
 						DownLoadThreads.remove(urlPath);
 						Log.e("main", this.getId()+"timeoutCount"+timeoutCount);
-						downloadFile(urlPath, filePath, fileName, iDownload);
+						downloadFile(urlPath, filePath,iDownload);
 					}
 				}else{
 					timeoutCount=0;
@@ -155,6 +153,12 @@ public class HttpDownloader {
 			}
 
 		}
+		 private String getFileName(String path)
+		    {
+		        int separatorIndex = path.lastIndexOf("/");
+		        return (separatorIndex < 0) ? path : path.substring(separatorIndex + 1, path.length());
+		    }
+
 		/**
 		 * 	中文转换成Unicode，只转换中文
 		 * @param String 字符
