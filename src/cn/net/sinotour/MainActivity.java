@@ -1,16 +1,24 @@
 package cn.net.sinotour;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
+
+import cn.net.sinotour.utils.HttpDownloader;
+import cn.net.sinotour.utils.HttpDownloader.IDownload;
 
 import com.juma.sdk.JumaDevice;
 import com.juma.sdk.ScanHelper;
@@ -22,6 +30,18 @@ public class MainActivity extends Activity {
 	private List<JumaDevice> devices=new ArrayList<JumaDevice>();
 	private DevicesAdapter adapter;
 	private Button btnDownload;
+	private ProgressBar pbDownload;
+	private String filePath;
+	private Handler handler=new Handler(){
+		public void handleMessage(Message msg) {
+			if(msg.what==1){
+				pbDownload.setProgress((Integer) msg.obj);
+				btnDownload.setText("正在下载%"+msg.obj);
+			}else if(msg.what==100){
+				btnDownload.setText("离线包已下载完成");
+			}
+		};
+	};
 	ScanCallback callback=new ScanCallback() {
 		
 		@Override
@@ -44,6 +64,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         helper=new ScanHelper(this, callback);
         initView();
+        filePath=getCacheDir()+File.separator+"Sintour"+File.separator;
         listenClick();
     }
     
@@ -53,12 +74,34 @@ public class MainActivity extends Activity {
 			@Override
 			public void onClick(View v) {
 				//下载景区离线包
+				HttpDownloader.getInstance(getApplicationContext()).addDownloadTask
+				("http://192.168.0.103:8080/Two%20Steps%20From%20Hell-El%20Dorado%20Dubstep%20(Remix)%20-%20remix.mp3", filePath,"a.mp3", new IDownload() {
+					
+					@Override
+					public void message(String msg) {
+						if(msg.equals(HttpDownloader.DOWNLOAD_SUCCESS)){
+							handler.sendEmptyMessage(100);
+							
+						}
+						
+					}
+					
+					@Override
+					public void loading(int progress) {
+						Message msg = handler.obtainMessage();
+						msg.what=1;
+						msg.obj=progress;
+						handler.sendMessage(msg);
+						
+					}
+				});
 			}
 		});
 		
 	}
 
 	private void initView() {
+		pbDownload=(ProgressBar) findViewById(R.id.pb_progress);
     	btnDownload=(Button) findViewById(R.id.btn_download);
 		lvDevices=(ListView) findViewById(R.id.lv_devices);
 		adapter=new DevicesAdapter(this, devices);
