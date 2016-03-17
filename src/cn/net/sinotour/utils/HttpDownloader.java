@@ -151,12 +151,12 @@ public class HttpDownloader {
 				e.printStackTrace();
 				iDownload.message(DOWNLOAD_FAILURE);
 				if(timeoutCount<5){
-					if(NetUtils.isNetworkConnected(context)){
+//					if(NetUtils.isNetworkConnected(context)){
 						timeoutCount++;
 						DownLoadThreads.remove(urlPath);
 						Log.e("main", this.getId()+"timeoutCount"+timeoutCount);
 						downloadFile(urlPath, filePath,fileName,iDownload);
-					}
+//					}
 				}else{
 					timeoutCount=0;
 					DownLoadThreads.remove(urlPath);

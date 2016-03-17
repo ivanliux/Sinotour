@@ -1,14 +1,20 @@
 package cn.net.sinotour;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-
 import android.app.Activity;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.content.res.AssetFileDescriptor;
+import android.content.res.AssetManager;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Message;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -16,7 +22,6 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
-
 import cn.net.sinotour.utils.HttpDownloader;
 import cn.net.sinotour.utils.HttpDownloader.IDownload;
 
@@ -56,6 +61,7 @@ public class MainActivity extends Activity {
 			devices.add(arg0);
 			adapter.setData(devices);
 			//判断本地离线包中是否有相同uuid，如果有播放该景点介绍
+			mService.playMusic(filePath+"a.mp3");
 		}
 	};
     @Override
@@ -64,8 +70,9 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         helper=new ScanHelper(this, callback);
         initView();
-        filePath=getCacheDir()+File.separator+"Sintour"+File.separator;
+        filePath="sdcard"+File.separator;
         listenClick();
+        bindService();
     }
     
     private void listenClick() {
@@ -73,33 +80,64 @@ public class MainActivity extends Activity {
 			
 			@Override
 			public void onClick(View v) {
-				//下载景区离线包
-				HttpDownloader.getInstance(getApplicationContext()).addDownloadTask
-				("http://192.168.0.103:8080/Two%20Steps%20From%20Hell-El%20Dorado%20Dubstep%20(Remix)%20-%20remix.mp3", filePath,"a.mp3", new IDownload() {
-					
-					@Override
-					public void message(String msg) {
-						if(msg.equals(HttpDownloader.DOWNLOAD_SUCCESS)){
-							handler.sendEmptyMessage(100);
-							
-						}
-						
-					}
-					
-					@Override
-					public void loading(int progress) {
-						Message msg = handler.obtainMessage();
-						msg.what=1;
-						msg.obj=progress;
-						handler.sendMessage(msg);
-						
-					}
-				});
+				AssetManager assetManager = getAssets();
+				try {
+					AssetFileDescriptor fileDescriptor = assetManager.openFd("a.mp3");
+					mService.playMusic(fileDescriptor.getFileDescriptor(),
+                            fileDescriptor.getStartOffset(),
+                            fileDescriptor.getLength());
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+//				//下载景区离线包
+//				HttpDownloader.getInstance(getApplicationContext()).addDownloadTask
+//				("http://192.168.4.104/%E5%8C%86%E5%8C%86%E9%82%A3%E5%B9%B4_%E7%8E%8B%E8%8F%B2_%E5%8C%86%E5%8C%86%E9%82%A3%E5%B9%B4.mp3", filePath,"a.mp3", new IDownload() {
+//					
+//					@Override
+//					public void message(String msg) {
+//						if(msg.equals(HttpDownloader.DOWNLOAD_SUCCESS)){
+//							handler.sendEmptyMessage(100);
+//							
+//						}
+//						
+//					}
+//					
+//					@Override
+//					public void loading(int progress) {
+//						Message msg = handler.obtainMessage();
+//						msg.what=1;
+//						msg.obj=progress;
+//						handler.sendMessage(msg);
+//						
+//					}
+//				});
 			}
 		});
 		
 	}
+	private void bindService() {
+		Intent serviceIntent = new Intent(this, MusicPlayService.class);
+		//		getActivity().startService(serviceIntent);
+		bindService(serviceIntent, mConnection,Context.BIND_AUTO_CREATE);
+		System.out.println("intent?" + (null == serviceIntent));
+	}
+	
+	/**播放音乐的类**/
+	MusicPlayService mService;
 
+	private ServiceConnection mConnection = new ServiceConnection() {
+		@Override
+		public void onServiceConnected(ComponentName className, IBinder service) {
+			mService = ((MusicPlayService.LocalBinder) service).getService();// 用绑定方法启动service，就是从这里绑定并得到service，然后就可以操作service了
+			System.out.println("1null?" + (null == mService));
+		}
+
+		@Override
+		public void onServiceDisconnected(ComponentName arg0) {
+		}
+	};
 	private void initView() {
 		pbDownload=(ProgressBar) findViewById(R.id.pb_progress);
     	btnDownload=(Button) findViewById(R.id.btn_download);
@@ -137,5 +175,10 @@ public class MainActivity extends Activity {
     	if(helper!=null){
     		helper.stopScan();
     	}
+    }
+    @Override
+    protected void onDestroy() {
+    	super.onDestroy();
+    	unbindService(mConnection);
     }
 }
