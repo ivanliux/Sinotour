@@ -4,10 +4,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.AssetFileDescriptor;
@@ -24,6 +27,8 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 import cn.net.sinotour.utils.HttpDownloader;
 import cn.net.sinotour.utils.HttpDownloader.IDownload;
+import cn.net.sinotour.view.RoundImageView;
+import cn.net.sinotour.view.WhewView;
 
 import com.juma.sdk.JumaDevice;
 import com.juma.sdk.ScanHelper;
@@ -31,22 +36,24 @@ import com.juma.sdk.ScanHelper.ScanCallback;
 
 public class MainActivity extends Activity {
 	private ScanHelper helper;
-	private ListView lvDevices;
-	private List<JumaDevice> devices=new ArrayList<JumaDevice>();
-	private DevicesAdapter adapter;
-	private Button btnDownload;
-	private ProgressBar pbDownload;
+//	private ListView lvDevices;
+//	private List<JumaDevice> devices=new ArrayList<JumaDevice>();
+//	private DevicesAdapter adapter;
+//	private Button btnDownload;
+//	private ProgressBar pbDownload;
 	private String filePath;
 	private Handler handler=new Handler(){
 		public void handleMessage(Message msg) {
 			if(msg.what==1){
-				pbDownload.setProgress((Integer) msg.obj);
-				btnDownload.setText("正在下载%"+msg.obj);
+//				pbDownload.setProgress((Integer) msg.obj);
+//				btnDownload.setText("正在下载%"+msg.obj);
 			}else if(msg.what==100){
-				btnDownload.setText("离线包已下载完成");
+//				btnDownload.setText("离线包已下载完成");
 			}
 		};
 	};
+	private WhewView wv;
+	private RoundImageView ic_bluebooth;
 	ScanCallback callback=new ScanCallback() {
 		
 		@Override
@@ -56,67 +63,112 @@ public class MainActivity extends Activity {
 		}
 		
 		@Override
-		public void onDiscover(JumaDevice arg0, int arg1) {
+		public void onDiscover(final JumaDevice arg0, int arg1) {
 			System.out.println(arg0.getName());
-			devices.add(arg0);
-			adapter.setData(devices);
+//			devices.add(arg0);
+//			adapter.setData(devices);
 			//判断本地离线包中是否有相同uuid，如果有播放该景点介绍
-			mService.playMusic(filePath+"a.mp3");
+			handler.post(new Runnable() {
+				
+				@Override
+				public void run() {
+					dialog(arg0.getName(),arg0.getUuid());
+					if(wv.isStarting()){
+						wv.stop();
+					}
+				}
+			});
+			
+//			mService.playMusic(filePath+"a.mp3");
 		}
 	};
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.layout_main);
         helper=new ScanHelper(this, callback);
         initView();
         filePath="sdcard"+File.separator;
         listenClick();
         bindService();
     }
-    
+    private void testPlay(){
+		AssetManager assetManager = getAssets();
+		try {
+			AssetFileDescriptor fileDescriptor = assetManager.openFd("a.mp3");
+			mService.playMusic(fileDescriptor.getFileDescriptor(),
+                    fileDescriptor.getStartOffset(),
+                    fileDescriptor.getLength());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    }
     private void listenClick() {
-		btnDownload.setOnClickListener(new OnClickListener() {
+    	
+//		btnDownload.setOnClickListener(new OnClickListener() {
+//			
+//			@Override
+//			public void onClick(View v) {
+//				AssetManager assetManager = getAssets();
+//				try {
+//					AssetFileDescriptor fileDescriptor = assetManager.openFd("a.mp3");
+//					mService.playMusic(fileDescriptor.getFileDescriptor(),
+//                            fileDescriptor.getStartOffset(),
+//                            fileDescriptor.getLength());
+//				} catch (IOException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//				
+////				//下载景区离线包
+////				HttpDownloader.getInstance(getApplicationContext()).addDownloadTask
+////				("http://192.168.4.104/%E5%8C%86%E5%8C%86%E9%82%A3%E5%B9%B4_%E7%8E%8B%E8%8F%B2_%E5%8C%86%E5%8C%86%E9%82%A3%E5%B9%B4.mp3", filePath,"a.mp3", new IDownload() {
+////					
+////					@Override
+////					public void message(String msg) {
+////						if(msg.equals(HttpDownloader.DOWNLOAD_SUCCESS)){
+////							handler.sendEmptyMessage(100);
+////							
+////						}
+////						
+////					}
+////					
+////					@Override
+////					public void loading(int progress) {
+////						Message msg = handler.obtainMessage();
+////						msg.what=1;
+////						msg.obj=progress;
+////						handler.sendMessage(msg);
+////						
+////					}
+////				});
+//			}
+//		});
+//		
+	}
+    private void dialog(String name,UUID uuid){
+    	AlertDialog dialog=new AlertDialog.Builder(this)
+    	.setTitle("检测到蓝牙设备")
+    	.setMessage("设备名称："+name+";\nUUID:"+uuid+";\n为您播放对应介绍")
+    	.setPositiveButton("确定", new DialogInterface.OnClickListener() {
 			
 			@Override
-			public void onClick(View v) {
-				AssetManager assetManager = getAssets();
-				try {
-					AssetFileDescriptor fileDescriptor = assetManager.openFd("a.mp3");
-					mService.playMusic(fileDescriptor.getFileDescriptor(),
-                            fileDescriptor.getStartOffset(),
-                            fileDescriptor.getLength());
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+			public void onClick(DialogInterface dialog, int which) {
+				testPlay();
 				
-//				//下载景区离线包
-//				HttpDownloader.getInstance(getApplicationContext()).addDownloadTask
-//				("http://192.168.4.104/%E5%8C%86%E5%8C%86%E9%82%A3%E5%B9%B4_%E7%8E%8B%E8%8F%B2_%E5%8C%86%E5%8C%86%E9%82%A3%E5%B9%B4.mp3", filePath,"a.mp3", new IDownload() {
-//					
-//					@Override
-//					public void message(String msg) {
-//						if(msg.equals(HttpDownloader.DOWNLOAD_SUCCESS)){
-//							handler.sendEmptyMessage(100);
-//							
-//						}
-//						
-//					}
-//					
-//					@Override
-//					public void loading(int progress) {
-//						Message msg = handler.obtainMessage();
-//						msg.what=1;
-//						msg.obj=progress;
-//						handler.sendMessage(msg);
-//						
-//					}
-//				});
 			}
-		});
-		
-	}
+		})
+		.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+			
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				dialog.dismiss();
+				
+			}
+		}).create();
+    	dialog.show();
+    }
 	private void bindService() {
 		Intent serviceIntent = new Intent(this, MusicPlayService.class);
 		//		getActivity().startService(serviceIntent);
@@ -139,29 +191,39 @@ public class MainActivity extends Activity {
 		}
 	};
 	private void initView() {
-		pbDownload=(ProgressBar) findViewById(R.id.pb_progress);
-    	btnDownload=(Button) findViewById(R.id.btn_download);
-		lvDevices=(ListView) findViewById(R.id.lv_devices);
-		adapter=new DevicesAdapter(this, devices);
-		lvDevices.setAdapter(adapter);
+		wv=(WhewView) findViewById(R.id.wv);
+		ic_bluebooth=(RoundImageView) findViewById(R.id.my_photo);
+		wv.start();
+//		pbDownload=(ProgressBar) findViewById(R.id.pb_progress);
+//    	btnDownload=(Button) findViewById(R.id.btn_download);
+//		lvDevices=(ListView) findViewById(R.id.lv_devices);
+//		adapter=new DevicesAdapter(this, devices);
+//		lvDevices.setAdapter(adapter);
 	}
 	/**
 	 * 扫描蓝牙设备
 	 */
     private void scanDevices(){
-    	if(helper.isEnabled()){
-    		if(!helper.isScanning()){
-    			helper.startScan(null);
+    	Thread thread=new Thread(){
+    		@Override
+    		public void run() {
+    			super.run();
+    			if(helper.isEnabled()){
+    	    		if(!helper.isScanning()){
+    	    			helper.startScan(null);
+    	    		}
+    	    	}else{
+    	    		boolean enable = helper.enable();
+    	    		if(enable){
+    	    			scanDevices();
+    	    		}else{
+    	    			Toast.makeText(MainActivity.this, "抱歉，您的设备不支持蓝牙功能", Toast.LENGTH_SHORT).show();
+    	    			return;
+    	    		}
+    	    	}
     		}
-    	}else{
-    		boolean enable = helper.enable();
-    		if(enable){
-    			scanDevices();
-    		}else{
-    			Toast.makeText(this, "抱歉，您的设备不支持蓝牙功能", Toast.LENGTH_SHORT).show();
-    			return;
-    		}
-    	}
+    	};
+    	thread.start();
     }
     @Override
     protected void onResume() {
